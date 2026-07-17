@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鏡頭選型計算器</title>
+    <!-- 樣式區：定義頁面排版、下拉選單、資訊卡片與輸入欄位等外觀。所有樣式皆為展示與使用者體驗優化，不會影響計算邏輯 -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            /*上下左右留白大小設定*/
+            padding: 30px 3vw;
+        }
+
+        /* 基礎版面樣式設定 */
+        .main-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 響應式排版設定 */
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 預設手機版：攤平左/右欄以允許跨欄排序 */
+        .left-panel,
+        .right-panel {
+            display: contents;
+        }
+
+        #camera-settings-card {
+            order: 1;
+        }
+
+        /* 下拉選單按鈕排版 */
+        #camera-settings-card .camera-toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+
+        #calc-card {
+            order: 2;
+        }
+
+        #lens-recommendation {
+            order: 3;
+        }
+
+        /* 切換鏡頭類型按鈕 */
+        .tabbtn {
+            background-color: #3498db;
+            color: rgb(255, 255, 255);
+            padding: 6px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: auto;
+            font-size: 16px;
+        }
+
+
+
+
+        /* 畫面寬度大於1100px 生效 */
+        @media (min-width: 1100px) {
+            .layout-container {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: stretch;
+            }
+
+            .left-panel,
+            .right-panel {
+                display: flex;
+            }
+
+            .left-panel {
+                flex: 1 1 400px;
+                min-width: 300px;
+                flex-direction: column;
+            }
+
+            .right-panel {
+                flex: 1 1 500px;
+                min-width: 300px;
+                flex-direction: column;
+            }
+
+            /*第一區塊設定*/
+            #camera-settings-card {
+                margin-bottom: 20px;
+                order: unset;
+
+            }
+
+            #calc-card,
+            #lens-recommendation {
+                order: unset;
+            }
+        }
+
+        /* 縮放設定結束 */
+
+
+
+        /* 下拉選單容器 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            flex: 1;
+            min-width: 140px;
+            margin-bottom: 0;
+        }
+
+        /* 下拉按鈕樣式 */
+        .dropbtn {
+            background-color: #3498db;
+            color: rgb(255, 255, 255);
+            padding: 0px 24px;
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            box-sizing: border-box;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            display: block;
+            text-align: center;
+        }
+
+        /* 下拉內容（選項）樣式 */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            min-width: 100%;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            border-radius: 4px;
+            border: 1px solid #000000;
+        }
+
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* 下拉預設隱藏 */
+        .dropdown-content {
+            display: none;
+        }
+
+        /* 開啟狀態 */
+        .dropdown.active .dropdown-content {
+            display: block;
+        }
+
+        /* 重置相機和重置數值按鈕 */
+        .btn-reset {
+            padding: 10px;
+            width: 100%;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            height: 40px;
+            line-height: 22px;
+            font-size: 16px;
+            box-sizing: border-box;
+            display: block;
+            text-align: center;
+
+        }
+
+
+        /* 顯示相機資訊的小方塊 */
+        .spec-container {
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            display: inline-block;
+            vertical-align: top;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #ffffff;
+            text-align: left;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+
+        /* 計算器卡片樣式，當未選相機時會被 disabled 樣式覆蓋 */
+        .calculator-card,
+        .recommend-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+            transition: opacity 0.3s, background-color 0.3s;
+        }
+
+        .recommend-card {
+            border: 1px solid #007bff;
+            flex: 1;
+        }
+
+        .calculator-card.disabled,
+        .recommend-card.disabled {
+            background-color: #ebebeb;
+            opacity: 0.6;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .calculator-card.disabled input,
+        .recommend-card.disabled button {
+            background-color: #f5f5f5;
+            color: #999;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+
+        /* Tooltip 基礎設定 */
+        .tooltip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            color: #ff0000;
+            transition: all 0.3s ease;
+            vertical-align: middle;
+            /* 強制修正基線對齊 */
+
+        }
+
+        .tooltip:hover {
+            color: #ff0000;
+            transform: scale(1.1);
+            z-index: 99999;
+        }
+
+        /* 氣泡框樣式 */
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 320px;
+            background-color: #f1f1f1;
+            color: #000000;
+            text-align: left;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #000000;
+            font-size: 13px;
+            box-shadow: 0 4px 10px rgb(99, 98, 98);
+            position: absolute;
+            z-index: 99999;
+            bottom: 150%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(5px);
+            font-weight: normal;
+        }
+
+        .tooltip .tooltiptext ol {
+            text-align: left;
+            list-style-position: outside;
+            list-style-type: decimal;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .tooltip .tooltiptext ul {
+            text-align: left;
+            list-style-position: outside;
+            list-style-type: circle;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .tooltip .tooltiptext li {
+            margin-bottom: 5px;
+            /* 增加項目間的距離 */
+        }
+
+
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+
+        /* 輸入列排版：標籤與輸入欄位 */
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .input-row label {
+            flex: 1.2;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .input-row input {
+            flex: 2;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            outline: none;
+        }
+
+
+
+        .hint {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        /* 針對不同瀏覽器的 number input 樣式調整，移除上下箭頭 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        /* ── 推薦鏡頭卡片列表設計系統 ── */
+
+        /* 推薦鏡頭搜尋按鈕 */
+        .btn-recommend {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            background: transparent;
+            color: #0056b3;
+            border: 1.5px solid #0056b3;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: background 0.18s, color 0.18s;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .btn-recommend:hover {
+            background: #0056b3;
+            color: #fff;
+        }
+
+        .btn-recommend svg {
+            flex-shrink: 0;
+        }
+
+        /* 推薦區標題行 */
+        .recommend-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .recommend-header h3 {
+            margin: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        /* 卡片列表容器 */
+        .lens-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        /* 單一鏡頭卡片 */
+        .lens-card {
+            background: #fff;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 12px 14px;
+            cursor: default;
+            transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+            position: relative;
+        }
+
+        .lens-card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
+            transform: translateY(-2px);
+            border-color: #C7D2FE;
+        }
+
+        /* 最佳選擇 卡片特殊樣式 */
+        .lens-card.best-match {
+            background: #F0F9FF;
+            border: 2px solid #38BDF8;
+            border-left: 4px solid #0EA5E9;
+        }
+
+        .lens-card.best-match:hover {
+            border-color: #0EA5E9;
+            box-shadow: 0 6px 24px rgba(14, 165, 233, 0.15);
+        }
+
+        /* 最佳選擇 緞帶 */
+        .best-match-ribbon {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: linear-gradient(135deg, #0EA5E9, #6366F1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        /* 卡片主標題（型號） */
+        .lens-card-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 4px;
+            padding-right: 90px;
+            /* 不被緞帶覆蓋 */
+        }
+
+        /* 焦距 / 倍率次標題 */
+        .lens-card-sub {
+            font-size: 15px;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+
+        /* 匹配進度條 */
+        .match-progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .match-progress-bar {
+            flex: 1;
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .match-progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.4s ease;
+        }
+
+        .match-progress-fill.high {
+            background: linear-gradient(90deg, #10B981, #34D399);
+        }
+
+        .match-progress-fill.medium {
+            background: linear-gradient(90deg, #F59E0B, #FCD34D);
+        }
+
+        .match-progress-fill.low {
+            background: linear-gradient(90deg, #EF4444, #FCA5A5);
+        }
+
+        .match-score-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #374151;
+            white-space: nowrap;
+            min-width: 56px;
+            text-align: right;
+        }
+
+        /* 狀態徽章 */
+        .lens-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 99px;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-warning {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-danger {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .badge-default {
+            background: #F3F4F6;
+            color: #374151;
+        }
+
+        /* 推薦鏡頭型號和規格 */
+        .lens-params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 10px;
+            border-top: 1px solid #E5E7EB;
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
+        .lens-param-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lens-param-label {
+            font-size: 10px;
+            color: #000000;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+        }
+
+        .lens-param-value {
+            font-size: 10px;
+            color: #000000;
+            font-weight: 700;
+        }
+
+        /* 空白提示 */
+        .lens-empty-hint {
+            text-align: center;
+            color: #000000;
+            font-size: 15px;
+            padding: 24px 10px;
+        }
+
+        .lens-empty-hint svg {
+            display: block;
+            margin: 0 auto 8px;
+
+            stroke: #000000;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 停用下拉選單樣式 */
+        .dropdown.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .dropdown.disabled .dropbtn {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+
+        /* 相機資訊卡 */
+        .spec-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* 相機規格資訊框 */
+        .info-box {
+            margin: 0;
+            width: 100%;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #b9bbbf;
+            background: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.5;
+            box-sizing: border-box;
+            transition: .2s;
+        }
+
+        /* 相機規格資訊框 hover 動畫 */
+        .info-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+        }
+
+
+
+        /* 手機版 */
+        @media (max-width:600px) {
+
+            /* 按鈕改成直向排列 */
+            #camera-settings-card .camera-toolbar {
+                flex-direction: column;
+            }
+
+            /* 規格卡改單欄 */
+            .spec-container {
+                grid-template-columns: 1fr;
+            }
+
+            .info-box {
+                min-height: 58px;
+                font-size: 13px;
+            }
+
+            h3 {
+                font-size: 20px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="layout-container">
+        <!-- 左側欄：控制區 (包含相機選擇與推薦鏡頭) -->
+        <div class="left-panel">
+            <div id="camera-settings-card" class="calculator-card">
+                <h3 style="margin-top:0;">相機設定
+                    <span class="tooltip">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span class="tooltiptext">
+                            <ul>
+                                <li style="line-height: 1.6; margin-bottom: 8px;">
+                                    <strong>傳輸介面：</strong>有 GigE 和 USB3，差別在於相同規格下 USB3 通常 FPS 較高，但傳輸距離較短。
+                                </li>
+                                <li style="line-height: 1.6;">
+                                    <strong>型號後綴：</strong>M 和 C 分別為黑白及彩色，規格皆相同，不影響計算。
+                                </li>
+                            </ul>
+                        </span>
+                    </span>
+                </h3>
+                <!-- 相機選擇下拉選單：使用者從這裡選擇要計算的相機型號 -->
+                <div class="camera-toolbar">
+                    <!-- 類別篩選下拉選單 -->
+                    <div style="display: flex; align-items: center; gap: 1px; flex: 1; min-width: 200px;">
+                        <label style="font-weight: bold; white-space: nowrap; font-size: 18px;">類別：</label>
+
+                        <div class="dropdown" id="category-dropdown-container" style="margin-bottom: 0; flex: 1;">
+                            <button id="selected-category" class="dropbtn">選擇類別</button>
+                            <div class="dropdown-content" id="category-dropdown-content"
+                                style="max-height: 200px; overflow-y: auto;">
+                                <a onclick="selectCategory('GigE')">GigE</a>
+                                <a onclick="selectCategory('USB3')">USB3</a>
+                                <a onclick="selectCategory('常用相機')">常用相機</a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 相機型號下拉選單 -->
+                    <div style="display: flex; align-items: center; gap: 1px; flex: 1.2; min-width: 220px;">
+                        <label style="font-weight: bold; white-space: nowrap; font-size: 18px;">型號：</label>
+
+                        <div class="dropdown disabled" id="camera-dropdown-container"
+                            style="margin-bottom: 0; flex: 1;">
+                            <button id="selected-name" class="dropbtn" disabled>選擇相機</button>
+                            <div class="dropdown-content" id="camera-dropdown-content"
+                                style="width: 200px; max-height: 300px; overflow-y: auto;">
+                                <a style="color: #999; cursor: default; text-align: center;">請先選擇類別</a>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-reset" style="width:auto;" onclick="resetCamera()">重置相機</button>
+                </div>
+
+                <!-- 相機硬體規格呈現區：顯示解析度、感測器尺寸、靶面尺寸、像素尺寸等資訊 -->
+                <div class="spec-container" style="margin-bottom: 0;">
+                    <div id="resolution" class="info-box">解析度：-</div>
+                    <div id="pixel-size" class="info-box">像素尺寸：-</div>
+                    <div id="sensor-size" class="info-box">感測器尺寸：-</div>
+                    <div id="target-size" class="info-box">靶面尺寸：-</div>
+
+                </div>
+            </div>
+
+            <!-- 推薦鏡頭區塊 -->
+            <div class="recommend-card disabled" id="lens-recommendation">
+                <h3 style="margin-top:0;">推薦鏡頭
+                    <span class="tooltip">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span class="tooltiptext">
+                            <ul>
+                                <li style="line-height: 1.6; margin-bottom: 8px;">
+                                    <strong>常見焦距規格 (mm) ：</strong>08 / 12 / 16 / 25 / 35 / 50 / 75
+                                </li>
+                                <li style="line-height: 1.6;">
+                                    <strong>鏡頭分數扣分項目：</strong>
+                                    <ul style="padding-left: 15px; margin-top: 6px;">
+                                        <li>鏡頭焦距或倍率有誤差</li>
+                                        <li>解析度不符</li>
+                                        <li>靶面尺寸不符</li>
+                                        <li>加裝延伸環</li>
+                                    </ul>
+                                </li>
+                                <li style="line-height: 1.6; margin-bottom: 8px;">
+                                    <strong>如須加裝延伸環，請將鏡頭焦距轉到最小</strong>
+                                </li>
+                            </ul>
+                        </span>
+                    </span>
+                </h3>
+                <div class="recommend-header">
+                    <button class="btn-recommend" id="btn-recommend" onclick="recommendLenses()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        尋找鏡頭
+                    </button>
+                </div>
+
+                <div class="lens-card-list" id="recommended-list">
+                    <div class="lens-empty-hint">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        請先選擇相機並輸入數值
+                    </div>
+                </div>
+            </div>
+        </div> <!-- 結束 left-panel -->
+
+        <!-- 右側欄：選型計算器主體 -->
+        <div class="right-panel">
+            <!-- 選型計算器主卡片：內含兩個分頁：FA 鏡頭 與 遠心鏡頭 -->
+            <div id="calc-card" class="calculator-card disabled">
+                <h3>鏡頭選型計算器
+                    <span class="tooltip">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <span class="tooltiptext">
+                            <ul>
+                                <li style="line-height: 1.6;">
+                                    <strong>計算規則：</strong>系統將根據所選的相機硬體規格與您輸入的數值，自動反推並計算出適合的鏡頭參數。
+                                </li>
+                                <li style="line-height: 1.6;">
+                                    <strong>計算方式：</strong>輸入任何空格，即可反推其他項。單位為mm。
+                                </li>
+                            </ul>
+                        </span>
+                    </span>
+                </h3>
+
+
+
+                </h3>
+                <!-- status-hint 用來提示使用者目前狀態或說明如何觸發計算 -->
+                <p id="status-hint" class="hint" style="color:red;font-size: 15px;">* 請先選擇相機以啟用功能</p>
+
+                <!-- 切換鏡頭按鈕 -->
+                <div style="margin-bottom:12px; display:flex; gap:8px;">
+                    <button id="tab-fa" class="tabbtn" style="background:#007bff;"
+                        onclick="switchTab('fa')">FA鏡頭</button>
+                    <button id="tab-tele" class="tabbtn" style="background:#6c757d;"
+                        onclick="switchTab('tele')">遠心鏡頭</button>
+                </div>
+
+                <!-- FA 鏡頭圖示：輸入欄位與標示皆定義於SVG中 -->
+                <div id="panel-fa">
+
+                    <svg viewBox="0 -15 800 580" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+
+                        <!-- ========================================== -->
+                        <!-- 1. FA視野區域 (FOV) - 繪製於最底層             -->
+                        <!-- ========================================== -->
+                        <g id="fov-area" transform="translate(400, 420)">
+                            <!-- 視野範圍 (藍色透明底座) -->
+                            <path id="fov-rect" d="M -225 0 L 75 -60 L 225 0 L -75 60 Z" fill="rgba(26, 115, 232, 0.1)"
+                                stroke="#1a73e8" stroke-width="2.5" />
+
+                            <!-- 視野中心輔助虛線 -->
+                            <line x1="-19.6" y1="3.9" x2="19.6" y2="-3.9" stroke="#000000ff" stroke-width="0.5"
+                                stroke-dasharray="4,2" />
+                            <line x1="-18.6" y1="-7.4" x2="18.6" y2="7.4" stroke="#000000ff" stroke-width="0.5"
+                                stroke-dasharray="4,2" />
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 2. FA測量線與光學路徑 (Measurements)       -->
+                        <!-- ========================================== -->
+                        <g id="measurements">
+                            <!-- 鏡頭視角線 (光路示意 - 黃色虛線) -->
+                            <g stroke="#dea600ff" stroke-width="1.2" fill="none" opacity="0.6">
+                                <!-- 視角左側線 -->
+                                <line x1="400" y1="120" x2="175" y2="420" />
+                                <!-- 視角右側線 -->
+                                <line x1="400" y1="120" x2="625" y2="420" />
+                                <!-- 視角中心線 -->
+                                <line x1="400" y1="120" x2="400" y2="420" stroke-dasharray="5,5" />
+                            </g>
+
+                            <!--箭頭標記 -->
+                            <marker id="arrowhead" markerWidth="20" markerHeight="20" refX="5" refY="5"
+                                orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff0000ff" />
+                            </marker>
+
+                            <!--量測線 -->
+                            <g stroke="#ff0000b4" stroke-width="2.5" fill="none">
+                                <!--工作距離 (WD)-->
+                                <line x1="305" y1="138" x2="305" y2="375" marker-start="url(#arrowhead)"
+                                    marker-end="url(#arrowhead)" />
+                                <line x1="290" y1="375" x2="370" y2="405" />
+                                <line x1="290" y1="126" x2="390" y2="166" />
+                                <!--鏡頭焦距 (F)-->
+                                <line x1="305" y1="98" x2="305" y2="127" marker-start="url(#arrowhead)"
+                                    marker-end="url(#arrowhead)" />
+                                <line x1="290" y1="85" x2="390" y2="125" />
+                                <!--視野長度 (W)-->
+                                <line x1="365" y1="490" x2="645" y2="434" marker-start="url(#arrowhead)"
+                                    marker-end="url(#arrowhead)" />
+                                <line x1="335" y1="485" x2="385" y2="505" />
+                                <line x1="635" y1="423" x2="685" y2="443" />
+                                <!--視野寬度 (H)-->
+                                <line x1="150" y1="433" x2="280" y2="485" marker-start="url(#arrowhead)"
+                                    marker-end="url(#arrowhead)" />
+                                <line x1="110" y1="435" x2="165" y2="424" />
+                                <line x1="260" y1="495" x2="315" y2="484" />
+                            </g>
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 3. FA相機與鏡頭硬體 (Camera & Lens)          -->
+                        <!-- ========================================== -->
+                        <g id="hardware">
+                            <defs>
+                                <!-- 圓柱體漸層 -->
+                                <linearGradient id="cylGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#5f6368" />
+                                    <stop offset="50%" stop-color="#9aa0a6" />
+                                    <stop offset="100%" stop-color="#3c4043" />
+                                </linearGradient>
+                            </defs>
+
+                            <!-- FA相機本體圖示 -->
+                            <g id="camera-body" transform="translate(400, 20)">
+                                <!-- 圓柱體 (Cylinder) - 置於方塊後方 -->
+                                <g id="cylinderGroup">
+                                    <!-- 圓柱側身: 使用路徑結合兩個橢圓弧線 -->
+                                    <path id="cylBody" d="M -40 50 A 40 20 0 0 0 40 50 L 40 130 A 40 20 0 0 1 -40 130 Z"
+                                        fill="url(#cylGrad)" />
+                                </g>
+
+                                <!-- 方形/相機本體 -->
+                                <g id="square-body">
+                                    <!-- 1. 頂面 -->
+                                    <path d="M -59 7.2 L 1.9 -5 L 59 17.8 L -1.9 30 Z" fill="#5f6368" />
+                                    <!-- 2. 左側面 -->
+                                    <path d="M -59 7.2 L -1.9 30 L -1.9 113 L -59 90.2 Z" fill="#202124" />
+                                    <!-- 3. 右側面 -->
+                                    <path d="M -1.9 30 L 59 17.8 L 59 100.8 L -1.9 113 Z" fill="#3c4043" />
+                                </g>
+                            </g>
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 4. 輸入參數區塊 (Input Fields)             -->
+                        <!-- ========================================== -->
+                        <g id="input-fields">
+                            <!-- FA視野長度 (W) 輸入框 -->
+                            <foreignObject x="430" y="455" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">視野長度 W</span>
+                                    <input type="number" id="in-fov-w"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('fovw', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- FA視野寬度 (H) 輸入框 -->
+                            <foreignObject x="30" y="450" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">視野寬度 H</span>
+                                    <input type="number" id="in-fov-h"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('fovh', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- FA寬度視角 (W°) 輸入框 -->
+                            <foreignObject x="500" y="140" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">寬度視角 W°</span>
+                                    <input type="number" id="in-ang-h"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('angh', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- FA長度視角 (H°) 輸入框 -->
+                            <foreignObject x="500" y="60" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">長度視角 H°</span>
+                                    <input type="number" id="in-ang-v"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('angv', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- FA拍攝距離 (WD) 輸入框 -->
+                            <foreignObject x="90" y="195" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">拍攝距離 WD</span>
+                                    <input type="number" id="in-wd"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('wd', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- FA鏡頭焦距 (F) 輸入框 -->
+                            <foreignObject x="90" y="30" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">鏡頭焦距 F</span>
+                                    <input type="number" id="in-f" step="0.1"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleInput('f', event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- 遠心鏡頭畫圖 -->
+                <div id="panel-tele" style="display:none;">
+
+                    <svg viewBox="0 -15 800 580" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+
+                        <!-- ========================================== -->
+                        <!-- 1. 遠心視野區域 (FOV) - 繪製於最底層             -->
+                        <!-- ========================================== -->
+                        <g id="fov-area-tele" transform="translate(400, 420)">
+                            <!-- 視野範圍 (藍色透明底座) -->
+                            <path id="fov-rect-tele" d="M -225 0 L 75 -60 L 225 0 L -75 60 Z"
+                                fill="rgba(26, 115, 232, 0.1)" stroke="#1a73e8" stroke-width="2.5" />
+
+                            <!-- 視野中心輔助虛線 -->
+                            <line x1="-19.6" y1="3.9" x2="19.6" y2="-3.9" stroke="#000000ff" stroke-width="0.5"
+                                stroke-dasharray="4,2" />
+                            <line x1="-18.6" y1="-7.4" x2="18.6" y2="7.4" stroke="#000000ff" stroke-width="0.5"
+                                stroke-dasharray="4,2" />
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 2. 遠心測量線與光學路徑 (Measurements)       -->
+                        <!-- ========================================== -->
+                        <g id="measurements-tele">
+                            <!-- 鏡頭視角線 (光路示意 - 黃色虛線) -->
+                            <g stroke="#dea600ff" stroke-width="1.2" fill="none" opacity="0.6">
+                                <!-- 視角左側線 -->
+                                <line x1="400" y1="260" x2="175" y2="420" />
+                                <!-- 視角右側線 -->
+                                <line x1="400" y1="260" x2="625" y2="420" />
+                                <!-- 視角中心線 -->
+                                <line x1="400" y1="120" x2="400" y2="420" stroke-dasharray="5,5" />
+                            </g>
+
+                            <!--箭頭標記 -->
+                            <marker id="arrowhead-tele" markerWidth="20" markerHeight="20" refX="5" refY="5"
+                                orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff0000ff" />
+                            </marker>
+
+                            <!--量測線 -->
+                            <g stroke="#ff0000b4" stroke-width="2.5" fill="none">
+                                <!--鏡頭焦距(F)-->
+                                <line x1="305" y1="98" x2="305" y2="245" marker-start="url(#arrowhead-tele)"
+                                    marker-end="url(#arrowhead-tele)" />
+                                <line x1="290" y1="85" x2="390" y2="125" />
+                                <line x1="290" y1="246" x2="390" y2="286" />
+                                <!--視野長度 (W)-->
+                                <line x1="365" y1="490" x2="645" y2="434" marker-start="url(#arrowhead-tele)"
+                                    marker-end="url(#arrowhead-tele)" />
+                                <line x1="335" y1="485" x2="385" y2="505" />
+                                <line x1="635" y1="423" x2="685" y2="443" />
+                                <!--視野寬度 (H)-->
+                                <line x1="150" y1="433" x2="280" y2="485" marker-start="url(#arrowhead-tele)"
+                                    marker-end="url(#arrowhead-tele)" />
+                                <line x1="110" y1="435" x2="165" y2="424" />
+                                <line x1="260" y1="495" x2="315" y2="484" />
+                            </g>
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 3. 遠心相機與鏡頭硬體 (Camera & Lens)          -->
+                        <!-- ========================================== -->
+                        <g id="hardware-tele">
+                            <defs>
+                                <!-- 圓柱體漸層 -->
+                                <linearGradient id="cylGrad-tele" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#5f6368" />
+                                    <stop offset="50%" stop-color="#9aa0a6" />
+                                    <stop offset="100%" stop-color="#3c4043" />
+                                </linearGradient>
+                            </defs>
+
+                            <!-- 相機本體圖示 -->
+                            <g id="camera-body-tele" transform="translate(400, 20)">
+                                <!-- 圓柱體 (Cylinder) - 置於方塊後方 -->
+                                <g id="cylinderGroup-tele">
+                                    <!-- 圓柱側身: 使用路徑結合兩個橢圓弧線 -->
+                                    <path id="cylBody-tele"
+                                        d="M -40 50 A 40 20 0 0 0 40 50 L 40 250 A 40 20 0 0 1 -40 250 Z"
+                                        fill="url(#cylGrad-tele)" />
+                                </g>
+
+                                <!-- 方形/相機本體 -->
+                                <g id="square-body-tele">
+                                    <!-- 1. 頂面 -->
+                                    <path d="M -59 7.2 L 1.9 -5 L 59 17.8 L -1.9 30 Z" fill="#5f6368" />
+                                    <!-- 2. 左側面 -->
+                                    <path d="M -59 7.2 L -1.9 30 L -1.9 113 L -59 90.2 Z" fill="#202124" />
+                                    <!-- 3. 右側面 -->
+                                    <path d="M -1.9 30 L 59 17.8 L 59 100.8 L -1.9 113 Z" fill="#3c4043" />
+                                </g>
+                            </g>
+                        </g>
+
+                        <!-- ========================================== -->
+                        <!-- 4. 輸入參數區塊 (Input Fields)             -->
+                        <!-- ========================================== -->
+                        <g id="input-fields-tele">
+                            <!-- 遠心視野長度 (W) 輸入框 -->
+                            <foreignObject x="430" y="455" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">視野長度 W</span>
+                                    <input type="number" id="in-obj-w"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleTeleInput(event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- 遠心視野寬度 (H) 輸入框 -->
+                            <foreignObject x="30" y="450" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">視野寬度 H</span>
+                                    <input type="number" id="in-obj-h"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleTeleInput(event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+
+                            <!-- 遠心倍率 (M) 輸入框 -->
+                            <foreignObject x="90" y="120" width="260" height="100">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-family:sans-serif; font-size:22px; font-weight:bold; color:#000;">
+                                    <span style="margin-bottom:8px;">鏡頭倍率 M</span>
+                                    <input type="number" id="in-mag" step="0.001"
+                                        style="width:120px; height:30px; font-size:22px; padding:0 10px; box-sizing:border-box; border:1px solid #676666; border-radius:8px; outline:none;"
+                                        onchange="handleTeleInput(event)"
+                                        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown') event.preventDefault();"
+                                        disabled="disabled" />
+                                </div>
+                            </foreignObject>
+                        </g>
+                    </svg>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn-reset" onclick="resetInputs()">重置數值</button>
+                </div>
+            </div> <!-- 結束 calc-card -->
+        </div> <!-- 結束 right-panel -->
+    </div>
+    </div>
+
+    <!--讀取google Excel試算表功能-->
+    <script>
+
+        // 1. Google 試算表設定路徑
+        const spreadsheetId = '1Enn6Yr6bOtlpWUSoy_Hd00VKWQh-0m4x';
+        const sheet1Name = 'GigE';
+        const sheet2Name = 'USB3';
+        const sheet3Name = 'FA鏡頭';   // 分頁三：FA 鏡頭規格
+        const sheet4Name = '遠心鏡頭'; // 分頁四：遠心鏡頭規格
+
+        // 2. 用於儲存合併後資料的容器
+        let cameraData = {
+            'GigE': {},
+            'USB3': {},
+            '常用相機': {}
+        };
+        // 鏡頭資料庫（從 Google Sheets 動態載入）
+        let lensData = {
+            fa: [],   // FA鏡頭分頁資料
+            tele: []  // 遠心鏡頭分頁資料
+        };
+        let fetchedCamsCount = 0;  // 等待相機資料（2個分頁）
+        let fetchedLensCount = 0;  // 等待鏡頭資料（2個分頁）
+        let selectedCategory = null;
+
+        // 3. 動態發送 JSONP 請求的函式
+        function requestSheetData(sheetName, callbackName) {
+            const encodedSheetName = encodeURIComponent(sheetName);
+            const jsonpUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodedSheetName}&tqx=responseHandler:${callbackName}`;
+            const script = document.createElement('script');
+            script.src = jsonpUrl;
+            document.body.appendChild(script);
+        }
+
+        // 4. 網頁載入完成後，同時抓取四個分頁（相機 x2 + 鏡頭 x2）
+        window.addEventListener('DOMContentLoaded', function () {
+            requestSheetData(sheet1Name, 'handleSheet1');
+            requestSheetData(sheet2Name, 'handleSheet2');
+            requestSheetData(sheet3Name, 'handleSheet3');
+            requestSheetData(sheet4Name, 'handleSheet4');
+            // 初始化推薦區塊的提示文字與圖示
+            hideRecommendations();
+        });
+
+        // 5. 處理分頁資料的核心邏輯 (包含動態欄位辨識與 USB3 欄位位移校正)
+        function processRows(responseTable, isUSB3) {
+            if (!responseTable || !responseTable.rows || responseTable.rows.length === 0) return;
+
+            const cols = responseTable.cols;
+            const rows = responseTable.rows;
+
+            // 動態找出所需相機欄位的索引
+            let idx = {
+                //OriginalName: -1,
+                name: -1,
+                pixelSize: -1,
+                sensorSize: -1,
+                resolution: -1,
+                // maximumGain: -1
+            };
+
+            // 輔助函式：比對標題 label
+            function matchHeader(label, targetText) {
+                if (!label) return false;
+                return label.trim().replace(/\s+/g, ' ').includes(targetText);
+            }
+
+            // EXCEL 相機標題列辨識，找是哪一列
+            function detectCols(labels) {
+                labels.forEach((label, i) => {
+                    const l = label ? String(label).trim() : '';
+
+                    // if (idx.OriginalName === -1 && (matchHeader(l, '原廠型號') || l === 'Original Name')) idx.OriginalName = i;
+                    if (idx.name === -1 && (matchHeader(l, '公司型號') || l === 'Name')) idx.name = i;
+                    if (idx.pixelSize === -1 && (matchHeader(l, '像元尺寸') || matchHeader(l, 'Pixel Size'))) idx.pixelSize = i;
+                    if (idx.sensorSize === -1 && (matchHeader(l, '感測器尺寸') || matchHeader(l, 'Sensor Size'))) idx.sensorSize = i;
+                    if (idx.resolution === -1 && (matchHeader(l, '解析度') || matchHeader(l, 'Resolution'))) idx.resolution = i;
+                    //if (idx.maximumGain === -1 && (matchHeader(l, '最大增益') || matchHeader(l, 'MaximumGain'))) idx.maximumGain = i;
+                });
+            }
+
+            // 優先從 cols 取標題
+            if (cols && cols.length > 0) detectCols(cols.map(c => c ? c.label : ''));
+            // 備用：從第一資料列取標題
+            if (rows[0] && rows[0].c) detectCols(rows[0].c.map(c => c && c.v != null ? String(c.v) : ''));
+
+            // 取得欄位資料
+            function getVal(row, i) {
+                return (row && row.c && i !== -1 && row.c[i] && row.c[i].v != null) ? row.c[i].v : '';
+            }
+
+            const category = isUSB3 ? 'USB3' : 'GigE';
+
+
+
+            // 遍歷每一列資料並解析
+            rows.forEach(function (row) {
+                if (!row || !row.c) return;
+
+                const name = String(getVal(row, idx.name)).trim();
+                const resolution = String(getVal(row, idx.resolution)).trim();
+                const SensorSize = String(getVal(row, idx.sensorSize)).trim();
+
+                // 過濾掉表頭列自己
+                if (name === '公司型號' || name === 'Name' || name === '' || resolution === '解析度' || resolution === 'Resolution' || resolution === '') {
+                    return;
+                }
+
+                // 把解析度拆成 width 跟 height
+                const resParts = resolution.toUpperCase().split(/X|\*/);
+                if (resParts.length < 2) return;
+                const resW = parseInt(resParts[0].trim(), 10);
+                const resH = parseInt(resParts[1].trim(), 10);
+                if (isNaN(resW) || isNaN(resH)) return;
+
+                // 解析像元尺寸
+                const rawPixelSize = String(getVal(row, idx.pixelSize));
+                const pMatch = rawPixelSize.match(/([0-9.]+)/);
+                const pixelSize = pMatch ? parseFloat(pMatch[1]) : 0.0;
+
+
+                //console.log(name, "sensorSize :", idx.sensorSize, SensorSize, "isUSB3 :", isUSB3, pixelSize);
+
+                cameraData[category][name] = {
+                    resW: resW,
+                    resH: resH,
+                    pixelSize: pixelSize,
+                    sensorsize: SensorSize
+                };
+            });
+        }
+
+        // 6. 渲染下拉選單與類別選擇邏輯
+        function renderDropdown() {
+            const dropdownContent = document.getElementById('camera-dropdown-content');
+            if (!dropdownContent) return;
+
+            dropdownContent.innerHTML = '';
+
+            if (fetchedCamsCount < 2) {
+                dropdownContent.innerHTML = '<a style="color: #999; cursor: default; text-align: center;">相機載入中...</a>';
+                return;
+            }
+
+            if (!selectedCategory) {
+                dropdownContent.innerHTML = '<a style="color: #999; cursor: default; text-align: center;">請先選擇類別</a>';
+                return;
+            }
+
+            const data = cameraData[selectedCategory] || {};
+            const sortedNames = Object.keys(data).sort((a, b) => {
+                const regex = /-([0-9.]+)M/i; // 匹配 "-數字M"
+                const matchA = a.match(regex);
+                const matchB = b.match(regex);
+
+                if (matchA && matchB) {
+                    return parseFloat(matchA[1]) - parseFloat(matchB[1]); // 依數字由小到大排
+                }
+                return a.localeCompare(b); // 格式不符時退回英文字母排序
+            });
+
+            if (sortedNames.length > 0) {
+                sortedNames.forEach(function (name) {
+                    const link = document.createElement('a');
+                    link.onclick = function () { updateCam(name); };
+                    link.textContent = name;
+                    dropdownContent.appendChild(link);
+                });
+            } else {
+                dropdownContent.innerHTML = '<a style="color: #d9534f; cursor: default; text-align: center;">載入失敗或無資料</a>';
+            }
+        }
+
+        function checkAndRender() {
+            fetchedCamsCount++;
+            if (fetchedCamsCount === 2) {
+                // 這裡填入您指定的型號清單
+                const favoriteModels =
+                    ['CVG-30M-165GT', 'CVG-130M-60GT', 'CVG-501M-24GT', 'CVG-1205M-9GT', 'CV3-2000M-19RT'];
+
+                // 從 GigE 和 USB3 中搜尋並複製到 常用相機
+                favoriteModels.forEach(name => {
+                    if (cameraData['GigE'][name]) {
+                        cameraData['常用相機'][name] = cameraData['GigE'][name];
+                    } else if (cameraData['USB3'][name]) {
+                        cameraData['常用相機'][name] = cameraData['USB3'][name];
+                    }
+                });
+
+                renderDropdown();
+            }
+        }
+
+        // 類別選擇與防呆解鎖邏輯
+        function selectCategory(category) {
+            document.getElementById("category-dropdown-container")?.classList.remove("active");
+            if (selectedCategory === category) return;
+            selectedCategory = category;
+
+            // 更新類別按鈕文字
+            const cateBtn = document.getElementById('selected-category');
+            if (cateBtn) cateBtn.innerText = category;
+
+            // 解鎖下拉選單
+            const dropdownContainer = document.getElementById('camera-dropdown-container');
+            const dropdownBtn = document.getElementById('selected-name');
+            if (dropdownContainer) dropdownContainer.classList.remove('disabled');
+            if (dropdownBtn) dropdownBtn.disabled = false;
+
+            // 切換類別時，重置目前已選的相機與運算數值
+            clearCameraSelection();
+
+            // 重新渲染下拉選單
+            renderDropdown();
+        }
+
+        // 清除相機選擇的輔助函式 (不重置類別)
+        function clearCameraSelection() {
+            document.querySelectorAll('#calc-card input').forEach(i => { i.value = ''; i.disabled = true; });
+            document.getElementById("selected-name").innerText = "選擇相機";
+            document.getElementById("resolution").innerText = "解析度：-";
+            document.getElementById("sensor-size").innerText = "感測器尺寸：-";
+            document.getElementById("target-size").innerText = "靶面尺寸：-";
+            document.getElementById("pixel-size").innerText = "像素尺寸：-";
+            const card = document.getElementById("calc-card");
+            card.classList.add("disabled");
+            const recCard = document.getElementById("lens-recommendation");
+            recCard.classList.add("disabled");
+            document.getElementById("status-hint").innerText = "* 請先選擇相機以啟用功能";
+            document.getElementById("status-hint").style.color = "red";
+            camW = 0; camH = 0;
+            hideRecommendations();
+        }
+
+        // 7. 相機分頁回傳處理
+        function handleSheet1(response) {
+            try {
+                processRows(response.table, false);
+            } catch (e) { console.error('分頁 GigE 解析失敗', e); }
+            checkAndRender();
+        }
+
+        function handleSheet2(response) {
+            try {
+                processRows(response.table, true);
+            } catch (e) { console.error('分頁 USB3 解析失敗', e); }
+            checkAndRender();
+        }
+
+        // 8. 鏡頭資料讀取
+        function processLensRows(responseTable, isTele) {
+            if (!responseTable || !responseTable.rows || responseTable.rows.length === 0) return;
+
+            const cols = responseTable.cols;
+            const rows = responseTable.rows;
+
+            // 動態辨識鏡頭欄位索引
+            let idx = {
+                //OriginalCompany: -1,
+                //OriginalName: -1,
+                Name: -1,
+                Resolution: -1,
+                SensorSize: -1,
+                FocusLength: -1,
+                LensType: -1,
+                FocusWD: -1,
+                ShopLink: -1,
+                MAG: -1,
+                WD: -1,
+                DOF: -1,
+                Coaxial: -1
+            };
+
+            function matchHeader(label, targetText) {
+                if (!label) return false;
+                return label.trim().replace(/\s+/g, ' ').includes(targetText);
+            }
+
+
+            // 鏡頭 EXCEL 標題列辨識
+            function detectCols(labels) {
+                labels.forEach((label, i) => {
+                    const l = label ? String(label).trim() : '';
+
+                    //if (idx.originalCompany === -1 && matchHeader(l, '原廠名稱')) idx.originalCompany = i;
+                    //if (idx.originalName === -1 && matchHeader(l, '原廠型號')) idx.originalName = i;
+                    if (idx.Name === -1 && (matchHeader(l, '公司型號') || l === 'Name') && !matchHeader(l, '原廠型號')) idx.Name = i;
+                    if (idx.Resolution === -1 && (matchHeader(l, '解析度') || matchHeader(l, 'Resolution'))) idx.Resolution = i;
+                    if (idx.SensorSize === -1 && (matchHeader(l, '感測器尺寸') || matchHeader(l, 'SensorSize'))) idx.SensorSize = i;
+                    if (idx.FocusLength === -1 && (matchHeader(l, '焦距') || matchHeader(l, 'Focus Length'))) idx.FocusLength = i;
+                    if (idx.LensType === -1 && (matchHeader(l, '鏡頭類型') || matchHeader(l, 'Lens Type'))) idx.LensType = i;
+                    if (idx.FocusWD === -1 && (matchHeader(l, '最低對焦距離') || matchHeader(l, 'Focus WD'))) idx.FocusWD = i;
+                    if (idx.ShopLink === -1 && (matchHeader(l, '購物連結') || matchHeader(l, 'Shop Link'))) idx.ShopLink = i;
+                    if (idx.MAG === -1 && (matchHeader(l, '放大倍率') || matchHeader(l, 'MAG'))) idx.MAG = i;
+                    if (idx.WD === -1 && (matchHeader(l, '工作距離') || matchHeader(l, 'WD'))) idx.WD = i;
+                    if (idx.DOF === -1 && (matchHeader(l, '景深') || matchHeader(l, 'DOF'))) idx.DOF = i;
+                    if (idx.Coaxial === -1 && (matchHeader(l, '軸') || matchHeader(l, 'Coaxial'))) idx.Coaxial = i;
+                });
+            }
+
+            // 優先從 cols 取標題
+            if (cols && cols.length > 0) detectCols(cols.map(c => c ? c.label : ''));
+            // 備用：從第一資料列取標題
+            if (rows[0] && rows[0].c) detectCols(rows[0].c.map(c => c && c.v != null ? String(c.v) : ''));
+
+            // 取得欄位資料
+            function getVal(row, i) {
+                return (row && row.c && i !== -1 && row.c[i] && row.c[i].v != null) ? row.c[i].v : '';
+            }
+
+            const target = isTele ? lensData.tele : lensData.fa;
+
+            rows.forEach(function (row) {
+                if (!row || !row.c) return;
+                const name = String(getVal(row, idx.Name)).trim();
+                if (!name || name === '公司型號' || name === 'Name') return;
+
+                const resolution = String(getVal(row, idx.Resolution)).trim();
+                const sensorSize = String(getVal(row, idx.SensorSize)).trim();
+                const lensType = String(getVal(row, idx.LensType)).trim();
+                const shopLink = String(getVal(row, idx.ShopLink)).trim();
+
+                //不共用資料，分開處理        
+                if (isTele) {
+                    // 遠心鏡頭規格
+                    const mag = parseFloat(getVal(row, idx.MAG));
+                    const wd = String(getVal(row, idx.WD)).trim();
+                    const dof = String(getVal(row, idx.DOF)).trim();
+                    if (!isNaN(mag)) {
+                        target.push({ name, mag, wd, dof, sensorSize, resolution, lensType, shopLink });
+                    }
+                    //console.log(`遠心鏡頭- Name: ${name}, Res: ${resolution}, Sensor: ${sensorSize}, Type: ${lensType}, MAG: ${mag}, WD: ${wd}, DOF: ${dof}, ShopLink: ${shopLink}`);
+                } else {
+                    // FA 鏡頭規格
+                    const f = parseFloat(getVal(row, idx.FocusLength));
+                    const focusWd = parseFloat(getVal(row, idx.FocusWD));
+                    if (!isNaN(f)) {
+                        target.push({ name, f, sensorSize, resolution, lensType, shopLink, focusWd });
+                    }
+                }
+            });
+        }
+
+        // 鏡頭分頁回傳 callback
+        function handleSheet3(response) {
+            try {
+                processLensRows(response.table, false); // FA鏡頭
+            } catch (e) { console.error('分頁 FA鏡頭 解析失敗', e); }
+            fetchedLensCount++;
+        }
+
+        function handleSheet4(response) {
+            try {
+                processLensRows(response.table, true); // 遠心鏡頭
+            } catch (e) { console.error('分頁 遠心鏡頭 解析失敗', e); }
+            fetchedLensCount++;
+        }
+
+
+
+        // camW, camH: 以 mm 為單位的感測器寬/高（由解析度 * 像素尺寸換算）
+        let camW = 0, camH = 0;
+        let camMp = 5; // default 5MP
+        let camDiag = 0;
+        let currentTab = 'fa';
+
+        // 輔助函式：解析鏡頭最大感測器對角線
+        function getSensorDiag(sensorStr) {
+            if (!sensorStr) return 11.0; // 預設 2/3"
+            const clean = sensorStr.replace(/"/g, '').trim();
+            if (clean === '1/3') return 6.0;
+            if (clean === '1/2.9') return 6.2;
+            if (clean === '1/1.8') return 8.9;
+            if (clean === '2/3') return 11.0;
+            if (clean === '1') return 16.0;
+            if (clean === '1.1') return 17.5;
+            if (clean === '4/3') return 22.5;
+            const val = parseFloat(clean);
+            if (!isNaN(val)) {
+                if (val === 1.1) return 17.5;
+                if (val === 1) return 16.0;
+            }
+            return 11.0;
+        }
+
+        // 輔助函式：解析鏡頭百萬畫素
+        function getLensMp(resStr) {
+            if (!resStr) return 5; // 預設 5MP
+            const match = resStr.match(/([0-9.]+)/);
+            return match ? parseFloat(match[1]) : 5;
+        }
+
+
+
+
+        /**
+         * hideRecommendations()
+         * 隱藏推薦結果並顯示提示，當數值改變時呼叫
+         */
+        function hideRecommendations() {
+            const listEl = document.getElementById("recommended-list");
+            if (!listEl) return;
+            const msg = camW === 0 ? '請先選擇相機並輸入數值' : '請點擊「尋找鏡頭」以獲得推薦';
+            listEl.innerHTML = `
+        <div class="lens-empty-hint">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            ${msg}
+        </div>`;
+        }
+
+        // 建立分數匹配條
+        function buildProgressBar(score) {
+            const pct = Math.min(100, Math.max(0, Math.round(score)));
+            const cls = pct >= 70 ? 'high' : pct >= 45 ? 'medium' : 'low';
+            return `
+                <div class="match-progress-wrap">
+                    <div class="match-progress-bar">
+                        <div class="match-progress-fill ${cls}" style="width:${pct}%"></div>
+                    </div>
+                    <span class="match-score-label">${pct}% 匹配</span>
+                </div>`;
+        }
+
+        // 錯誤/警告/延伸環 通用標籤
+        function buildBadges(errors, warnings, ring) {
+            let html = '';
+
+            // 1. 延伸環 (大於 0mm 才顯示)
+            if (ring > 0) {
+                html += `<span class="badge badge-warning">⚠ 需加裝延伸環 +${ring.toFixed(1)} mm</span>`;
+            }
+
+            // 2. 動態顯示錯誤訊息 (秀出實際的錯誤文字)
+            if (errors && errors.length > 0) {
+                errors.forEach(errText => {
+                    html += `<span class="badge badge-danger">⚠ ${errText}</span>`;
+                });
+            }
+
+            // 3. 動態顯示警告訊息 (解決倍率不匹配沒出現的問題)
+            if (warnings && warnings.length > 0) {
+                warnings.forEach(warnText => {
+                    html += `<span class="badge badge-warning">⚠ ${warnText}</span>`;
+                });
+            }
+
+            // 4. 完美符合規格
+            if (!errors.length && !warnings.length && !(ring > 0)) {
+                html += `<span class="badge badge-success">✓ 符合規格</span>`;
+            }
+
+            return html;
+        }
+
+        // 遠心鏡頭：實際參數雙欄格
+        function buildParamGrid(params) {
+            return `<div class="lens-params-grid">${params.map(p => `
+                    <div class="lens-param-item">
+                        <span class="lens-param-label">${p.label}</span>
+                        <span class="lens-param-value">${p.value}</span>
+                    </div>`).join('')
+                }</div>`;
+        }
+        //FA推薦鏡頭計算公式
+        function recommendLenses() {
+            const listEl = document.getElementById("recommended-list");
+            listEl.innerHTML = "";
+
+            // 尚未選相機
+            if (camW === 0) {
+                listEl.innerHTML = `<div class="lens-empty-hint">請先選擇相機並輸入數值</div>`;
+                return;
+            }
+
+            // 鏡頭資料尚未載入完成
+            if (fetchedLensCount < 2) {
+                listEl.innerHTML = `<div class="lens-empty-hint">鏡頭資料載入中，請稍候再試…</div>`;
+                return;
+            }
+
+            if (currentTab === 'fa') {
+
+                // ── FA 鏡頭：依計算焦距篩選並評估 ──
+                const f = document.getElementById('in-f');
+                const calculatedF = parseFloat(f.value);
+                const wdEl = document.getElementById('in-wd');
+                const targetWd = parseFloat(wdEl.value);
+
+                // 檢查焦距輸入是否有效，若 F 大於或等於 WD
+                if (isNaN(calculatedF) || calculatedF >= targetWd) {
+                    listEl.innerHTML = `
+            <div class="lens-empty-hint">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: red !important;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                焦距 (F) 數值不完整或有誤，請重新輸入參數
+            </div>`;
+                    return;
+                }
+
+                // 焦距超過 80mm，FA 鏡頭不適用，直接提示
+                if (calculatedF > 80) {
+                    listEl.innerHTML = `
+            <div class="lens-empty-hint">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: red !important;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                焦距 (F) 超出範圍。請縮短拍攝距離 (WD)，或加大視野範圍 (FOV)。
+            </div>`;
+                    return;
+                }
+
+                // 根據目標焦距篩選鏡頭（±50%)
+                const Focus_TOLERANCE = 0.5; // 允許 ±50% 誤差
+                const preFilteredFa = lensData.fa.filter(lens => {
+                    const gapPct = Math.abs(lens.f - calculatedF) / calculatedF;
+                    return gapPct <= Focus_TOLERANCE;
+                });
+
+                // FA鏡頭計算分數
+                const scoredLenses = preFilteredFa.map(lens => {
+                    let score = 100;
+                    let warnings = [];
+                    let errors = [];
+
+                    // 1. FA焦距偏離評估 (按比例扣分最多 50 分)
+                    const fDiff = Math.abs(lens.f - calculatedF);
+                    const gapPct = fDiff / calculatedF;
+                    score -= gapPct * 50;
+
+                    // 焦距不匹配警告（差距超過 0.01mm 就提示）
+                    if (fDiff > 0.01) {
+                        warnings.push(`焦距不匹配，F請輸入${lens.f}重新計算`);
+                    }
+
+                    // 2. FA晶片覆蓋度檢測 (防黑角固定扣 60 分)
+                    const lensDiag = getSensorDiag(lens.sensorSize);
+                    if (camDiag > lensDiag + 0.5) {
+                        score -= 60;
+                        errors.push(`黑角風險`);
+                    }
+
+                    // 3. FA解析度匹配度評估 (扣 15 分)
+                    const lensMp = getLensMp(lens.resolution);
+                    if (camMp > lensMp) {
+                        score -= 15;
+                        warnings.push(`解析度偏低`);
+                    }
+
+
+                    // 4.FA延伸環 (Extension Ring) 長度計算，用最低對焦距離(focusWd)計算
+                    let ringRequired = 0;
+
+                    // 判斷是否需要延伸環
+                    const focusWd = lens.focusWd || (lens.f * 10);
+                    if (targetWd < focusWd) {
+                        // 計算公式：L_ring = f^2 / (WD - f) - f^2 / (focusWd - f)
+                        const ringFormula = (lens.f * lens.f) / (targetWd - lens.f) - (lens.f * lens.f) / (focusWd - lens.f);
+                        ringRequired = Math.max(0, ringFormula);
+                    } else {
+                        ringRequired = 0;
+                    }
+
+
+                    // 5. FA延伸環扣分評估 (每增加 1mm 扣 2.5 分)
+                    if (ringRequired > 0) {
+                        score -= ringRequired * 2.5;
+                    }
+
+
+                    return {
+                        ...lens,
+                        score: Math.max(0, score),
+                        ring: ringRequired,
+                        warnings,
+                        errors
+                    };
+                });
+
+                // 依評分由高至低排序
+                scoredLenses.sort((a, b) => b.score - a.score);
+
+                // 過濾分數過低的FA鏡頭，最多顯示前 3 筆
+                const results = scoredLenses.filter(l => l.score >= 25).slice(0, 3);
+
+                if (results.length > 0) {
+                    results.forEach((lens, index) => {
+                        const isRecommended = index === 0 && lens.errors.length === 0;
+                        const card = document.createElement('div');
+                        card.className = 'lens-card' + (isRecommended ? ' best-match' : '');
+
+                        const ribbon = isRecommended
+                            ? `<span class="best-match-ribbon">⭐ 最佳選擇</span>`
+                            : '';
+                        //FA推薦的內容：鏡頭名稱 + 焦距 + 靶面尺寸 + 解析度 + 相容性
+                        card.innerHTML =
+                            ribbon +
+                            `<div class="lens-card-name">${lens.name}</div>` +
+                            `<div class="lens-card-sub">焦距：${lens.f} mm / 靶面尺寸：${lens.sensorSize} / 解析度：${lens.resolution} MP</div>` +
+                            buildProgressBar(lens.score) +
+                            `<div class="lens-badges">${buildBadges(lens.errors, lens.warnings, lens.ring)}</div>`;
+
+                        listEl.appendChild(card);
+                    });
+                } else {
+                    listEl.innerHTML = `<div class="lens-empty-hint">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: red !important;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>找不到合適的 FA 鏡頭，請調整拍攝距離WD或視野範圍FOV。</div>`;
+                }
+
+            } else if (currentTab === 'tele') {
+
+                // ── 遠心鏡頭：依計算倍率智慧匹配 ──
+                const magEl = document.getElementById('in-mag');
+                const calculatedM = parseFloat(magEl.value);
+                if (isNaN(calculatedM) || calculatedM <= 0) {
+                    listEl.innerHTML = `
+                    <div class="lens-empty-hint">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: red !important;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                        倍率數值不完整或有誤，請先輸入參數
+                    </div>`;
+                    return;
+                }
+
+                // ── 遠心鏡頭倍率容許範圍預篩（±50%）──
+                const MAG_TOLERANCE = 0.5; // 允許 ±50% 誤差
+                const preFilteredTele = lensData.tele.filter(lens => {
+                    const gapPct = Math.abs(lens.mag - calculatedM) / calculatedM;
+                    return gapPct <= MAG_TOLERANCE;
+                });
+
+                // 智慧匹配評估
+                const scoredLenses = preFilteredTele.map(lens => {
+                    let score = 100;
+                    let warnings = [];
+                    let errors = [];
+
+                    // 1. 放大倍率貼近度評分：只要倍率不完全相同，就依比例扣分並推入警告
+                    const magDiff = Math.abs(lens.mag - calculatedM);
+                    if (magDiff > 0) {
+                        const gapPct = magDiff / calculatedM;
+                        score -= gapPct * 80;
+                        warnings.push(`倍率不匹配`);
+                    }
+
+                    // 2. 遠心晶片覆蓋度檢測 (防黑角)
+                    const lensDiag = getSensorDiag(lens.sensorSize);
+                    if (camDiag > lensDiag + 0.5) {
+                        score -= 50;
+                        errors.push(`黑角風險`);
+                    }
+
+                    // 3. 遠心實際視野 (FOV)
+                    const actualFovW = camW / lens.mag;
+                    const actualFovH = camH / lens.mag;
+
+                    return {
+                        ...lens,
+                        score: Math.max(0, score),
+                        actualFovW,
+                        actualFovH,
+                        warnings,
+                        errors
+                    };
+                });
+
+
+                // 依評分由高至低排序
+                scoredLenses.sort((a, b) => b.score - a.score);
+
+                // 過濾分數過低的遠心鏡頭，最多顯示前 3 筆
+                const results = scoredLenses.filter(l => l.score >= 15).slice(0, 3);
+
+                if (results.length > 0) {
+                    results.forEach((lens, index) => {
+                        const isRecommended = index === 0 && lens.errors.length === 0;
+                        const card = document.createElement('div');
+                        card.className = 'lens-card' + (isRecommended ? ' best-match' : '');
+
+                        const ribbon = isRecommended
+                            ? `<span class="best-match-ribbon">⭐ 最佳選擇</span>`
+                            : '';
+                        //遠心鏡頭推薦的內容：鏡頭名稱 + 倍率 + 工作距離WD + 相容性
+                        card.innerHTML =
+                            ribbon +
+                            `<div class="lens-card-name">${lens.name}</div>` +
+                            `<div class="lens-card-sub">倍率：${lens.mag}倍 / WD：${lens.wd || '-'} mm / 景深：${lens.dof || '-'} mm</div>` +
+                            buildProgressBar(lens.score) +
+                            `<div class="lens-badges">${buildBadges(lens.errors, lens.warnings, 0)}</div>`;
+
+                        listEl.appendChild(card);
+                    });
+                } else {
+                    listEl.innerHTML = `<div class="lens-empty-hint">找不到適合的遠心鏡頭，請調整放大倍率規格。</div>`;
+                }
+            }
+        }
+
+        /* 計算相機資訊 */
+        function updateCam(name) {
+            if (!selectedCategory) return;
+            const cam = cameraData[selectedCategory][name];
+            if (!cam) return;
+            document.getElementById("camera-dropdown-container")?.classList.remove("active");
+            // 解析度（像素）乘以像素尺寸（μm），並轉換為 mm
+            camW = cam.resW * cam.pixelSize / 1000;
+            camH = cam.resH * cam.pixelSize / 1000;
+            camDiag = Math.sqrt(camW * camW + camH * camH);
+            camMp = (cam.resW * cam.resH) / 1000000;
+            document.getElementById("selected-name").innerText = name;
+            document.getElementById("resolution").innerText = "解析度：" + cam.resW + " x " + cam.resH;
+            document.getElementById("sensor-size").innerText = "感測器尺寸：" + camW.toFixed(2) + " x " + camH.toFixed(2) + " mm";
+            document.getElementById("target-size").innerText = "靶面尺寸：" + cam.sensorsize;
+            document.getElementById("pixel-size").innerText = "像素尺寸：" + (cam.pixelSize).toFixed(2) + " μm";
+            // 啟用卡片並開放輸入欄位
+            const card = document.getElementById("calc-card");
+            card.classList.remove("disabled");
+            card.querySelectorAll('input').forEach(input => input.disabled = false);
+            const recCard = document.getElementById("lens-recommendation");
+            recCard.classList.remove("disabled");
+            document.getElementById("status-hint").innerText = "* 註釋：修改數值後按 Enter 即可觸發計算。";
+            document.getElementById("status-hint").style.color = "#666";
+            // 以 cam 作為初始觸發來源，嘗試計算欄位
+            calculateFA('cam');
+            if (currentTab === 'tele') calculateTele();
+        }
+
+        /**
+         * handleInput(fieldId)
+         * 簡單的輸入事件處理器：只有在欄位有值時才呼叫 calculateFA
+         * fieldId 代表最後觸發計算的欄位（f, wd, fovw, fovh, angh, angv）
+         */
+        function handleInput(fieldId, event) {
+            const inputEl = event.target;
+            if (inputEl.value === "") return;
+            calculateFA(fieldId);
+            if (currentTab === 'tele') {
+                calculateTele();
+            }
+        }
+
+
+        // 新增專用的遠心鏡頭輸入處理函式，僅觸發遠心鏡頭計算
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('panel-fa').style.display = (tab === 'fa') ? 'block' : 'none';
+            document.getElementById('panel-tele').style.display = (tab === 'tele') ? 'block' : 'none';
+            document.getElementById('tab-fa').style.background = (tab === 'fa') ? '#007bff' : '#6c757d';
+            document.getElementById('tab-tele').style.background = (tab === 'tele') ? '#007bff' : '#6c757d';
+
+            // 若對應分頁的關鍵數值完整，自動觸發推薦搜尋
+            if (tab === 'fa') {
+                const f = parseFloat(document.getElementById('in-f').value);
+                const wd = parseFloat(document.getElementById('in-wd').value);
+                if (!isNaN(f) && f > 0 && !isNaN(wd) && wd > 0) {
+                    recommendLenses();
+                } else {
+                    hideRecommendations();
+                }
+            } else if (tab === 'tele') {
+                const mag = parseFloat(document.getElementById('in-mag').value);
+                if (!isNaN(mag) && mag > 0) {
+                    recommendLenses();
+                } else {
+                    hideRecommendations();
+                }
+            }
+        }
+
+        function handleTeleInput(event) {
+            const inputEl = event.target;
+            if (inputEl.value === "") return;
+            // Clear the other two inputs to allow recalculation based on the newly changed field
+            const ids = ['in-mag', 'in-obj-w', 'in-obj-h'];
+            ids.forEach(id => {
+                if (id !== inputEl.id) {
+                    document.getElementById(id).value = '';
+                }
+            });
+            calculateTele();
+        }
+
+        // 遠心境頭計算公式：輸入任一項（M, W, H）可計算其他項
+        function calculateTele() {
+            const magEl = document.getElementById('in-mag');
+            const objWEl = document.getElementById('in-obj-w');
+            const objHEl = document.getElementById('in-obj-h');
+
+
+            let M = parseFloat(magEl.value);
+            let objW = parseFloat(objWEl.value);
+            let objH = parseFloat(objHEl.value);
+
+            // 優先使用已知的 M 計算 W/H
+            if (!isNaN(M) && M > 0) {
+                // 計算視野
+                const fovW = camW / M;
+                const fovH = camH / M;
+                // 若使用者未填寫 W/H，回寫到輸入欄；否則以使用者輸入為準，但仍顯示計算值
+                if (isNaN(objW) || objWEl.value === '') {
+                    objWEl.value = fovW.toFixed(2);
+                    objW = fovW;
+                }
+                if (isNaN(objH) || objHEl.value === '') {
+                    objHEl.value = fovH.toFixed(2);
+                    objH = fovH;
+                }
+                if (outW) outW.value = fovW.toFixed(2);
+                if (outH) outH.value = fovH.toFixed(2);
+                if (angleEl) angleEl.value = 'approx 0 (telecentric)';
+                hideRecommendations();
+                return;
+            }
+
+            // 若沒有 M，但有 W 或 H，反推 M
+            if (!isNaN(objW) && objW > 0) {
+                M = camW / objW;
+                magEl.value = M.toFixed(2);
+                // 若 H 沒填，根據 M 計算 H
+                const fovH = camH / M;
+                if (isNaN(objH) || objHEl.value === '') {
+                    objHEl.value = fovH.toFixed(2);
+                    objH = fovH;
+                }
+                if (outW) outW.value = objW.toFixed(2);
+                if (outH) outH.value = (objH && !isNaN(objH)) ? parseFloat(objH).toFixed(2) : fovH.toFixed(2);
+                if (angleEl) angleEl.value = 'approx 0 (telecentric)';
+                hideRecommendations();
+                return;
+            }
+
+            if (!isNaN(objH) && objH > 0) {
+                M = camH / objH;
+                magEl.value = M.toFixed(2);
+                const fovW = camW / M;
+                if (isNaN(objW) || objWEl.value === '') {
+                    objWEl.value = fovW.toFixed(2);
+                    objW = fovW;
+                }
+                if (outW) outW.value = (objW && !isNaN(objW)) ? parseFloat(objW).toFixed(2) : fovW.toFixed(2);
+                if (outH) outH.value = objH.toFixed(2);
+                if (angleEl) angleEl.value = 'approx 0 (telecentric)';
+                hideRecommendations();
+                return;
+            }
+
+            if (outW) outW.value = '';
+            if (outH) outH.value = '';
+            if (angleEl) angleEl.value = '';
+            hideRecommendations();
+        }
+
+        /*FA鏡頭計算公式*/
+        function calculateFA(lastTrigger) {
+            if (camW === 0) return; // 尚未選相機則不計算
+            const f = document.getElementById('in-f');
+            const wd = document.getElementById('in-wd');
+            const fovW = document.getElementById('in-fov-w');
+            const fovH = document.getElementById('in-fov-h');
+            const angH = document.getElementById('in-ang-h');
+            const angV = document.getElementById('in-ang-v');
+            let vF = parseFloat(f.value);
+            let vWD = parseFloat(wd.value);
+            let vW = parseFloat(fovW.value);
+            let vH = parseFloat(fovH.value);
+            let vAngH = parseFloat(angH.value);
+            let vAngV = parseFloat(angV.value);
+            const ratio = camW / camH; // 感測器寬高比
+
+            // 如果最後觸發的是視角，優先換算成焦距
+            if (lastTrigger === 'angh' && vAngH > 0) {
+                vF = camW / (2 * Math.tan(vAngH * Math.PI / 180 / 2));
+                updateOutput(f, vF);
+            } else if (lastTrigger === 'angv' && vAngV > 0) {
+                vF = camH / (2 * Math.tan(vAngV * Math.PI / 180 / 2));
+                updateOutput(f, vF);
+            }
+
+            // 若 WD 未輸入，且已知焦距 F 與水平視野 W ，推算 WD
+            if (isNaN(vWD) || wd.value === "") {
+                if (vF > 0) {
+                    // 使用者輸入了水平視野 FovW
+                    if (vW > 0) {
+                        vWD = (vW * vF) / camW;
+                        vH = vW / ratio;
+                        updateOutput(wd, vWD);
+                        updateOutput(fovH, vH); // 自動補齊 H
+                    }
+                    // 使用者輸入了垂直視野 FovH
+                    else if (vH > 0) {
+                        vWD = (vH * vF) / camH;
+                        vW = vH * ratio;
+                        updateOutput(wd, vWD);
+                        updateOutput(fovW, vW); // 自動補齊 W
+                    }
+                } else {
+                    // 沒有焦距，依據相機比例讓 FovW 與 FovH 互推
+                    if (lastTrigger === 'fovw' && vW > 0) {
+                        vH = vW / ratio;
+                        updateOutput(fovH, vH);
+                    } else if (lastTrigger === 'fovh' && vH > 0) {
+                        vW = vH * ratio;
+                        updateOutput(fovW, vW);
+                    }
+                }
+            } else {
+                // 如果最後觸發的是水平視野，根據 WD 與 W 計算焦距
+                if (lastTrigger === 'fovw' && vW > 0) {
+                    vF = (camW * vWD) / vW;
+                    updateOutput(f, vF);
+                    updateOutput(fovH, vW / ratio);
+                } else if (lastTrigger === 'fovh' && vH > 0) {
+                    // 若最後觸發的是垂直視野，先由比率換算出寬度再計算焦距
+                    vW = vH * ratio;
+                    vF = (camW * vWD) / vW;
+                    updateOutput(fovW, vW);
+                    updateOutput(f, vF);
+                }
+                // 【當有點擊 WD/Cam 且畫面上已有 FOV 時，由 FOV 和 WD 逆推焦距】
+                else if ((lastTrigger === 'wd' || lastTrigger === 'cam') && (vW > 0 || vH > 0)) {
+                    if (vW > 0) {
+                        vF = (camW * vWD) / vW;
+                        updateOutput(f, vF);
+                        updateOutput(fovH, vW / ratio);
+                    } else if (vH > 0) {
+                        vW = vH * ratio;
+                        vF = (camW * vWD) / vW;
+                        updateOutput(f, vF);
+                        updateOutput(fovW, vW);
+                    }
+                }
+                // 最後一個條件，移至此處作為備用
+                else if ((lastTrigger === 'f' || lastTrigger === 'wd' || lastTrigger === 'cam' || lastTrigger === 'angh' || lastTrigger === 'angv') && vF > 0) {
+                    // 已知焦距與 WD（或剛選 camera），計算視野 W/H
+                    updateOutput(fovW, (camW * vWD) / vF);
+                    updateOutput(fovH, (camH * vWD) / vF);
+                }
+            }
+            // 最後若可得焦距，計算水平/垂直視角（度數）
+            const finalF = vF > 0 ? vF : parseFloat(f.value);
+            if (finalF > 0) {
+                updateOutput(angH, 2 * Math.atan(camW / (2 * finalF)) * (180 / Math.PI));
+                updateOutput(angV, 2 * Math.atan(camH / (2 * finalF)) * (180 / Math.PI));
+            }
+            hideRecommendations();
+        }
+
+        /** 
+         * 將計算結果寫回對應的輸入欄位。
+         * 若使用者目前正聚焦在該欄位，則避免覆寫，保留使用者正在輸入的值。
+         */
+        function updateOutput(el, val) {
+            if (document.activeElement !== el) {
+                el.value = val.toFixed(2);
+            }
+        }
+
+        // 重置數值（保留已選相機）
+        function resetInputs() {
+            document.querySelectorAll('#calc-card input').forEach(i => { i.value = ''; });
+            //document.getElementById("status-hint").innerText = "* 已重置數值，可繼續輸入或調整";
+            //document.getElementById("status-hint").style.color = "#666";
+            hideRecommendations();
+        }
+
+        // 重置相機選擇與相關資料（同時會清空並停用輸入欄位，並重置類別防呆）
+        function resetCamera() {
+            clearCameraSelection();
+
+            // 重置類別選擇與按鈕文字
+            selectedCategory = null;
+            const cateBtn = document.getElementById('selected-category');
+            if (cateBtn) cateBtn.innerText = "選擇類別";
+
+            // 重新鎖定下拉選單
+            const dropdownContainer = document.getElementById('camera-dropdown-container');
+            const dropdownBtn = document.getElementById('selected-name');
+            if (dropdownContainer) dropdownContainer.classList.add('disabled');
+            if (dropdownBtn) dropdownBtn.disabled = true;
+
+            // 重新渲染下拉選單，顯示「請先選擇類別」
+            renderDropdown();
+        }
+
+        // =========================
+        // 下拉選單控制
+        // =========================
+        document.addEventListener("DOMContentLoaded", () => {
+            const dropdowns =
+                document.querySelectorAll(".dropdown");
+            dropdowns.forEach(dropdown => {
+                const button =
+                    dropdown.querySelector(".dropbtn");
+                if (!button) return;
+                button.addEventListener("click", e => {
+                    e.stopPropagation();
+                    // 關閉其他下拉
+                    dropdowns.forEach(d => {
+                        if (d !== dropdown) {
+                            d.classList.remove("active");
+                        }
+                    });
+                    // 切換自己
+                    dropdown.classList.toggle("active");
+                });
+
+            });
+
+            // 點擊外面自動關閉
+            document.addEventListener("click", () => {
+                dropdowns.forEach(dropdown => {
+                    dropdown.classList.remove("active");
+                });
+
+            });
+
+            // 修正 Tooltiptext 顯示位置，避免超出畫面
+            const tooltips = document.querySelectorAll('.tooltip');
+            tooltips.forEach(tooltip => {
+                tooltip.addEventListener('mouseenter', () => {
+                    // if (window.innerWidth <= 600) return; // 手機版交給 CSS fixed 定位
+
+                    const tooltiptext = tooltip.querySelector('.tooltiptext');
+                    if (!tooltiptext) return;
+
+                    // 重置為預設樣式以便重新計算基準位置
+                    tooltiptext.style.left = '50%';
+                    tooltiptext.style.marginLeft = '-110px';
+                    tooltiptext.style.bottom = '150%';
+                    tooltiptext.style.top = 'auto';
+                    tooltiptext.style.setProperty('--arrow-left', '50%');
+                    tooltiptext.classList.remove('tooltip-bottom');
+
+                    const rect = tooltiptext.getBoundingClientRect();
+                    const viewportWidth = window.innerWidth;
+
+                    // 1. 檢查左右是否超出畫面
+                    let offset = 0;
+                    if (rect.left < 10) {
+                        offset = 10 - rect.left;
+                    } else if (rect.right > viewportWidth - 10) {
+                        offset = (viewportWidth - 10) - rect.right;
+                    }
+
+                    if (offset !== 0) {
+                        tooltiptext.style.left = `calc(50% + ${offset}px)`;
+                        tooltiptext.style.setProperty('--arrow-left', `calc(50% - ${offset}px)`);
+                    }
+
+                    // 2. 檢查上下是否超出畫面
+                    const updatedRect = tooltiptext.getBoundingClientRect();
+                    if (updatedRect.top < 10) {
+                        // 向上超出畫面，改為在下方顯示
+                        tooltiptext.style.bottom = 'auto';
+                        tooltiptext.style.top = '150%';
+                        tooltiptext.classList.add('tooltip-bottom');
+                    }
+                });
+            });
+
+        });
+
+
+    </script>
+</body>
+
+</html>
