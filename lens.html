@@ -12,7 +12,7 @@
             background-color: #f8f9fa;
             margin: 0;
             /*上下左右留白大小設定*/
-            padding: 30px 3vw;
+            padding: 30px 2vw;
         }
 
         /* 基礎版面樣式設定 */
@@ -294,7 +294,7 @@
             padding-bottom: 10px;
         }
 
-        /* Tooltip 基礎設定 */
+        /* 問號圖示tooltip基礎設定 */
         .tooltip {
             position: relative;
             display: inline-flex;
@@ -919,17 +919,17 @@
                         <label for="mode-f" onclick="handleModeClick('f', event)">求焦距 (F)</label>
 
                         <input type="radio" name="calc-mode" id="mode-wd" value="wd">
-                        <label for="mode-wd" onclick="handleModeClick('wd', event)">求工作距離 (WD)</label>
+                        <label for="mode-wd" onclick="handleModeClick('wd', event)">求拍攝距離 (WD)</label>
 
                         <input type="radio" name="calc-mode" id="mode-fov" value="fov">
-                        <label for="mode-fov" onclick="handleModeClick('fov', event)">求視野長寬 (H/W)</label>
+                        <label for="mode-fov" onclick="handleModeClick('fov', event)">求視野長寬 (W/H)</label>
                     </div>
                 </div>
 
                 <!-- FA 鏡頭圖示：輸入欄位與標示皆定義於SVG中 -->
                 <div id="panel-fa">
 
-                    <svg viewBox="0 -15 800 580" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                    <svg viewBox="30 0 800 550" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
 
                         <!-- ========================================== -->
                         <!-- 1. FA視野區域 (FOV) - 繪製於最底層             -->
@@ -968,7 +968,7 @@
 
                             <!--量測線 -->
                             <g stroke="#ff0000b4" stroke-width="2.5" fill="none">
-                                <!--工作距離 (WD)-->
+                                <!--拍攝距離 (WD)-->
                                 <line x1="305" y1="138" x2="305" y2="375" marker-start="url(#arrowhead)"
                                     marker-end="url(#arrowhead)" />
                                 <line x1="290" y1="375" x2="370" y2="405" />
@@ -1025,7 +1025,7 @@
                         </g>
 
                         <!-- ========================================== -->
-                        <!-- 4. 輸入參數區塊 (Input Fields)             -->
+                        <!-- 4. FA輸入參數區塊 (Input Fields)             -->
                         <!-- ========================================== -->
                         <g id="input-fields">
                             <!-- FA視野長度 (W) 輸入框 -->
@@ -1121,7 +1121,7 @@
                 <!-- 遠心鏡頭畫圖 -->
                 <div id="panel-tele" style="display:none;">
 
-                    <svg viewBox="0 -15 800 580" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                    <svg viewBox="30 -15 800 580" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
 
                         <!-- ========================================== -->
                         <!-- 1. 遠心視野區域 (FOV) - 繪製於最底層             -->
@@ -2012,7 +2012,7 @@
                             : '';
                         const linkIcon = hasLink ? ' <span style="font-size: 14px; color: #007bff; vertical-align: middle;">🔗</span>' : '';
 
-                        //遠心鏡頭推薦的內容：鏡頭名稱 + 倍率 + 工作距離WD + 分數 + 景深
+                        //遠心鏡頭推薦的內容：鏡頭名稱 + 倍率 + 拍攝距離WD + 分數 + 景深
                         card.innerHTML =
                             ribbon +
                             `<div class="lens-card-name">${lens.name}${linkIcon}</div>` +
@@ -2055,7 +2055,7 @@
             updateInputLockState();
             const recCard = document.getElementById("lens-recommendation");
             recCard.classList.remove("disabled");
-            document.getElementById("status-hint").innerText = "* 註釋：修改數值後按 Enter 即可觸發計算。";
+            document.getElementById("status-hint").innerText = "* 註釋：修改數值後按 Enter 即可觸發計算。 單位為mm。";
             document.getElementById("status-hint").style.color = "#666";
             // 以 cam 作為初始觸發來源，嘗試計算欄位
             calculateFA('cam');
@@ -2104,7 +2104,7 @@
                 // 鎖定 焦距 (F) 及視角欄位
                 lockedIds = ['in-f', 'in-ang-h', 'in-ang-v'];
             } else if (currentCalcMode === 'wd') {
-                // 鎖定 工作距離 (WD) 欄位
+                // 鎖定 拍攝距離 (WD) 欄位
                 lockedIds = ['in-wd'];
             } else if (currentCalcMode === 'fov') {
                 // 鎖定 視場範圍 (FOV W / H) 欄位
@@ -2324,8 +2324,8 @@
                 }
 
             } else if (currentCalcMode === 'wd') {
-                // ── 2. 求工作距離模式 (WD Mode) ──
-                // 鎖定 WD。改變 F（維持 FOV）或改變 FOV（維持 F），重新計算出新的工作距離 WD。
+                // ── 2. 求拍攝距離模式 (WD Mode) ──
+                // 鎖定 WD。改變 F（維持 FOV）或改變 FOV（維持 F），重新計算出新的拍攝距離 WD。
 
                 // 若最後觸發視角，先轉換為 F
                 if (lastTrigger === 'angh' && vAngH > 0) {
@@ -2351,7 +2351,7 @@
                     updateOutput(fovH, vH);
                 }
 
-                // 由 F 與 FOV 重新計算出新的工作距離 WD
+                // 由 F 與 FOV 重新計算出新的拍攝距離 WD
                 if (vF > 0 && vW > 0) {
                     vWD = (vW * vF) / camW;
                     updateOutput(wd, vWD);
