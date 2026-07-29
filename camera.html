@@ -738,12 +738,12 @@
                 <div class="input-row-wrapper">
                     <div class="input-row">
                         <label for="cam-pixels-per-feature">單個特徵所需像素</label>
-                        <input type="number" id="cam-pixels-per-feature" value="5" oninput="calculateCameraRes()"
-                            onblur="if(this.value < 4 || this.value === '') this.value = 4; calculateCameraRes();">
+                        <input type="number" id="cam-pixels-per-feature" value="6" oninput="calculateCameraRes()"
+                            onblur="if(this.value < 5 || this.value === '') this.value = 5; calculateCameraRes();">
                     </div>
                     <div
                         style="color: #ff0000; font-size: 12px; margin-top: -10px; margin-bottom: 16px; padding-left: 36%;">
-                        * 提示：最低 4 像素，越高精度越好。
+                        * 提示：最低 5 像素，越高精度越好。
                     </div>
                 </div>
                 <button class="btn-reset" onclick="resetCameraForm()">重置數值</button>
@@ -1142,19 +1142,19 @@
                 match = standardCams.find(c => c.resW >= reqW && c.resH >= reqH);
                 if (!match) {
                     match = {
-                        name: '超高解析度自定義相機',
+                        name: '解析度自定義相機',
                         resW: reqW,
                         resH: reqH,
-                        pixelSize: 2.0,
-                        pixelSizeW: 2.0,
-                        pixelSizeH: 2.0,
-                        size: '4/3"',
+                        pixelSize: "來電詢問",
+                        pixelSizeW: 0,
+                        pixelSizeH: 0,
+                        size: "來電詢問",
                         mp: (reqW * reqH / 1000000),
-                        sensorType: 'Custom High Resolution',
-                        interface: '10 GigE / CoaXPress',
+                        sensorType: "來電詢問",
+                        interface: "來電詢問",
                         fps: 0,
-                        color: '黑白',
-                        shuttertype: '全局快門',
+                        color: "來電詢問",
+                        shuttertype: "來電詢問",
                     };
                 }
             }
@@ -1171,14 +1171,14 @@
             let displayCams = [...standardCams];
 
             // 如果最佳首選是自定義相機，加入顯示列表頂部
-            if (match && match.name === '超高解析自定義相機') {
+            if (match && match.name === '解析度自定義相機') {
                 displayCams.unshift(match);
             }
 
             // 篩選邏輯：同時符合所有條件
             displayCams = displayCams.filter(c => {
                 // 條件 1：解析度需求篩選（符合輸入需求或是自定義相機）
-                const meetsResReq = !isInputValid || (c.resW >= reqW && c.resH >= reqH) || c.name === '超高解析自定義相機';
+                const meetsResReq = !isInputValid || (c.resW >= reqW && c.resH >= reqH) || c.name === '解析度自定義相機';
                 if (!meetsResReq) return false;
 
                 // 條件 2：MP 範圍篩選
@@ -1227,7 +1227,7 @@
             let bestMatch = null;
             if (isInputValid) {
                 const suitableInDisplay = displayCams.filter(c =>
-                    (c.resW >= reqW && c.resH >= reqH) || c.name === '超高解析度自定義相機'
+                    (c.resW >= reqW && c.resH >= reqH) || c.name === '解析度自定義相機'
                 );
                 if (suitableInDisplay.length > 0) {
                     // 相同 MP 時，GigE 優先於 USB
