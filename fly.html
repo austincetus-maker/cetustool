@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>飛拍計算器 — 鑫堡視覺選型平台</title>
+	<meta name="description" content="根據解析度、FOV、快門曝光時間與容許拖影像素，精確計算飛拍容許之最大移動速度。">
+	<style>
+		/* 基礎版面與 CSS 變數定義 */
+		:root {
+			--primary: #3b82f6;
+			--primary-hover: #2563eb;
+			--success: #10b981;
+			--dark-bg: #0f172a;
+			--border-color: #cbd5e1;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			background-color: #f8f9fa;
+			margin: 0;
+			padding: 30px 2vw;
+		}
+
+		.main-wrapper {
+			max-width: 1100px;
+			margin: 0 auto;
+		}
+
+		/* 左右雙欄位佈局 */
+		.layout-container {
+			display: flex;
+			flex-direction: column;
+			gap: 24px;
+		}
+
+		.left-panel,
+		.right-panel {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+		}
+
+		@media (min-width: 768px) {
+			.layout-container {
+				flex-direction: row;
+				align-items: stretch;
+			}
+		}
+
+		/* 卡片基礎樣式 */
+		.calculator-card {
+			background: #fff;
+			padding: 25px;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			border: 1px solid #ccc;
+			width: 100%;
+			box-sizing: border-box;
+
+		}
+
+		h3 {
+			margin-top: 0;
+			color: #0056b3;
+			border-bottom: 2px solid #0056b3;
+			padding-bottom: 10px;
+			font-size: 1.2em;
+			margin-bottom: 20px;
+		}
+
+		/* 輸入表單單列樣式 */
+		.input-group {
+			margin-bottom: 18px;
+		}
+
+		.input-group label {
+			display: block;
+			font-weight: 700;
+			font-size: 14px;
+			color: #1e293b;
+			margin-bottom: 8px;
+		}
+
+		.input-with-unit {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+		}
+
+		.input-control {
+			width: 100%;
+			padding: 10px 14px;
+			border: 1px solid #cbd5e1;
+			border-radius: 8px;
+			font-size: 16px;
+			outline: none;
+			color: #0f172a;
+			background-color: #fff;
+			transition: all 0.2s ease;
+		}
+
+		.input-control:focus {
+			border-color: #3b82f6;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+		}
+
+		/* 下拉選擇選單 */
+		.unit-select {
+			padding: 10px 12px;
+			border: 1px solid #cbd5e1;
+			border-radius: 8px;
+			font-size: 15px;
+			font-weight: 600;
+			background-color: #ffffff;
+			color: #1e293b;
+			cursor: pointer;
+			outline: none;
+			transition: all 0.2s ease;
+			white-space: nowrap;
+		}
+
+		.unit-select:focus {
+			border-color: #3b82f6;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+		}
+
+		/* 移除 number input 的上下箭頭 */
+		input::-webkit-outer-spin-button,
+		input::-webkit-inner-spin-button {
+			-webkit-appearance: none;
+			appearance: none;
+			margin: 0;
+		}
+
+		input[type=number] {
+			-moz-appearance: textfield;
+			appearance: textfield;
+		}
+
+		.btn-reset {
+			margin-top: auto;
+			padding: 12px;
+			width: 100%;
+			background: #64748b;
+			color: white;
+			border: none;
+			border-radius: 8px;
+			font-size: 15px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: background 0.2s, transform 0.1s;
+		}
+
+		.btn-reset:hover {
+			background: #475569;
+		}
+
+		.btn-reset:active {
+			transform: scale(0.98);
+		}
+
+		/* 右側主輸出框 (Speed Display Hero Card) */
+		.speed-hero-box {
+			background: #ffffff;
+			border: 2px solid #3b82f6;
+			border-radius: 12px;
+			padding: 24px 20px;
+			text-align: center;
+			margin-bottom: 20px;
+			box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+		}
+
+		.speed-hero-title {
+			font-size: 15px;
+			font-weight: 700;
+			color: #1e40af;
+			margin-bottom: 12px;
+		}
+
+		.speed-value-display {
+			font-size: 2.5rem;
+			font-weight: 800;
+			color: #1d4ed8;
+			line-height: 1.1;
+			margin-bottom: 16px;
+			word-break: break-all;
+		}
+
+		.speed-unit-wrapper {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			background: #ffffff;
+			padding: 6px 14px;
+			border-radius: 20px;
+			border: 1px solid #0a76f1;
+		}
+
+		.speed-unit-label {
+			font-size: 13px;
+			font-weight: 700;
+			color: #1e3a8a;
+		}
+
+		/* 次要計算數據方塊 */
+		.sub-result-group {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.info-box {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 14px 18px;
+			border: 1px solid #e2e8f0;
+			border-left: 4px solid #3b82f6;
+			border-radius: 8px;
+			background-color: #ffffff;
+			font-size: 14px;
+			font-weight: 700;
+			color: #334155;
+		}
+
+		.info-value {
+			font-size: 1.05rem;
+			color: #1d4ed8;
+		}
+
+		/* 問號圖示tooltip基礎設定 */
+		.tooltip {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			cursor: help;
+			color: #ff0000;
+			transition: all 0.3s ease;
+			vertical-align: middle;
+		}
+
+		.tooltip:hover {
+			color: #ff0000;
+			transform: scale(1.1);
+			z-index: 99999;
+		}
+
+		/* 氣泡框樣式 */
+		.tooltip .tooltiptext {
+			visibility: hidden;
+			width: 320px;
+			background-color: #f1f1f1;
+			color: #000000;
+			text-align: left;
+			padding: 10px;
+			border-radius: 8px;
+			border: 1px solid #000000;
+			font-size: 13px;
+			box-shadow: 0 4px 10px rgb(99, 98, 98);
+			position: absolute;
+			z-index: 99999;
+			bottom: 150%;
+			left: 50%;
+			margin-left: -110px;
+			opacity: 0;
+			transition: opacity 0.3s, transform 0.3s;
+			transform: translateY(5px);
+			font-weight: normal;
+		}
+
+		.tooltip .tooltiptext ol {
+			text-align: left;
+			list-style-position: outside;
+			list-style-type: decimal;
+			padding-left: 20px;
+			margin: 0;
+		}
+
+		.tooltip .tooltiptext ul {
+			text-align: left;
+			list-style-position: outside;
+			list-style-type: circle;
+			padding-left: 20px;
+			margin: 0;
+		}
+
+		.tooltip .tooltiptext li {
+			margin-bottom: 5px;
+		}
+
+		.tooltip:hover .tooltiptext {
+			visibility: visible;
+			opacity: 1;
+			transform: translateY(0);
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="main-wrapper">
+		<div class="layout-container">
+
+			<!-- 左側輸入欄位 Card -->
+			<div class="left-panel">
+				<div class="calculator-card">
+					<h3>飛拍參數輸入
+						<span class="tooltip">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+								stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="10"></circle>
+								<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+								<line x1="12" y1="17" x2="12.01" y2="17"></line>
+							</svg>
+							<span class="tooltiptext">
+								<ul>
+									<li><strong>相機長邊解析度：</strong>相機長邊的總畫素數。</li>
+									<li><strong>長邊拍攝範圍：</strong>相機長邊拍到的實際長度。</li>
+									<li><strong>快門 / 曝光時間：</strong>相機單次曝光時間。</li>
+									<li><strong>容許拖影像素：</strong>移動拍照時可接受的最大模糊像素。</li>
+								</ul>
+							</span>
+					</h3>
+
+					<div class="input-group">
+						<label for="fly-resolution">相機 長邊解析度 (pix)</label>
+						<input type="number" id="fly-resolution" min="1" step="1" class="input-control"
+							oninput="calculateMaxSpeed()">
+					</div>
+
+					<div class="input-group">
+						<label for="fly-fov">長邊 拍攝範圍 (mm)</label>
+						<input type="number" id="fly-fov" min="0.001" step="any" class="input-control"
+							oninput="calculateMaxSpeed()">
+					</div>
+
+					<div class="input-group">
+						<label for="fly-shutter">快門 / 曝光時間</label>
+						<div class="input-with-unit">
+							<input type="number" id="fly-shutter" min="0.001" step="any" class="input-control"
+								oninput="calculateMaxSpeed()">
+							<select id="fly-shutter-unit" class="unit-select" onchange="calculateMaxSpeed()">
+								<option value="us">µs</option>
+								<option value="ms" selected>ms</option>
+								<option value="s">s</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="input-group">
+						<label for="fly-allowed-blur">容許拖影像素 (pix)</label>
+						<input type="number" id="fly-allowed-blur" min="0.01" step="any" class="input-control"
+							oninput="calculateMaxSpeed()">
+					</div>
+
+					<button class="btn-reset" onclick="resetFlyForm()">重置數值</button>
+				</div>
+			</div>
+
+			<!-- 右側輸出與切換欄位 Card -->
+			<div class="right-panel">
+				<div class="calculator-card ">
+					<h3>速度計算結果
+						<span class="tooltip">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+								stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="10"></circle>
+								<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+								<line x1="12" y1="17" x2="12.01" y2="17"></line>
+							</svg>
+							<span class="tooltiptext">
+								<ul>
+									<li><strong>容許最大移動速度：</strong>在不超出拖影像素的前提下的極限速度。</li>
+									<li><strong>顯示單位：</strong>可切換為 mm/s、m/s、cm/s 或 mm/min。</li>
+								</ul>
+							</span>
+						</span>
+					</h3>
+
+					<!-- 容許之最大移動速度 (主顯示卡) -->
+					<div class="speed-hero-box">
+						<div class="speed-hero-title">容許最大移動速度</div>
+						<div class="speed-value-display" id="res-max-speed">-</div>
+						<div class="speed-unit-wrapper">
+							<span class="speed-unit-label">顯示單位：</span>
+							<select id="fly-speed-unit" class="unit-select" onchange="calculateMaxSpeed()">
+								<option value="mm_s" selected>mm/s</option>
+								<option value="m_s">m/s</option>
+								<option value="cm_s">cm/s</option>
+								<option value="mm_min">mm/min</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- 計算結果 -->
+					<div class="sub-result-group">
+						<div class="info-box">
+							<span>空間解析度</span>
+							<span class="info-value" id="res-spatial-res">-</span>
+						</div>
+						<div class="info-box">
+							<span>容許拖影長度</span>
+							<span class="info-value" id="res-allowed-dist">-</span>
+						</div>
+					</div>
+
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+	<script>
+		// 核心計算函數
+		function calculateMaxSpeed() {
+			// 1. 取得輸入資料
+			const resPx = parseFloat(document.getElementById('fly-resolution').value) || 0;
+			const fovMm = parseFloat(document.getElementById('fly-fov').value) || 0;
+			const shutterVal = parseFloat(document.getElementById('fly-shutter').value) || 0;
+			const shutterUnit = document.getElementById('fly-shutter-unit').value;
+			const blurPx = parseFloat(document.getElementById('fly-allowed-blur').value) || 0;
+			const speedUnit = document.getElementById('fly-speed-unit').value;
+			const speedDisplayEl = document.getElementById('res-max-speed');
+			const spatialResEl = document.getElementById('res-spatial-res');
+			const allowedDistEl = document.getElementById('res-allowed-dist');
+
+			// 驗證輸入合法性
+			if (resPx <= 0 || fovMm <= 0 || shutterVal <= 0 || blurPx <= 0) {
+				speedDisplayEl.textContent = '-';
+				spatialResEl.textContent = '-';
+				allowedDistEl.textContent = '-';
+				return;
+			}
+
+			// 2. 計算空間解析度 (mm/px)
+			const spatialRes = fovMm / resPx; // mm/px
+
+			// 3. 計算快門時間換算為秒 (s)
+			let shutterSec = 0;
+			if (shutterUnit === 'us') {
+				shutterSec = shutterVal / 1000000;
+			} else if (shutterUnit === 'ms') {
+				shutterSec = shutterVal / 1000;
+			} else {
+				shutterSec = shutterVal;
+			}
+
+			// 4. 計算容許移動距離 (mm)
+			const allowedDistMm = blurPx * spatialRes; // mm
+
+			// 5. 計算容許最大速度 (基準單位：mm/s)
+			// Speed (mm/s) = Distance (mm) / Time (s)
+			const maxSpeedMms = allowedDistMm / shutterSec;
+
+			// 6. 依據右側選單進行單位轉換
+			let convertedSpeed = 0;
+			if (speedUnit === 'mm_s') {
+				convertedSpeed = maxSpeedMms;
+			} else if (speedUnit === 'm_s') {
+				convertedSpeed = maxSpeedMms / 1000;
+			} else if (speedUnit === 'cm_s') {
+				convertedSpeed = maxSpeedMms / 10;
+			} else if (speedUnit === 'mm_min') {
+				convertedSpeed = maxSpeedMms * 60;
+			}
+
+			// 格式化輸出數字
+			speedDisplayEl.textContent = formatNumber(convertedSpeed);
+			spatialResEl.textContent = `${formatNumber(spatialRes)} mm/px`;
+			allowedDistEl.textContent = `${formatNumber(allowedDistMm)} mm`;
+		}
+
+		// 數值格式化工具函數
+		function formatNumber(num) {
+			if (num === 0) return '0';
+			const absNum = Math.abs(num);
+			if (absNum >= 1000000) {
+				return num.toFixed(0);
+			} else if (absNum >= 100) {
+				return num.toFixed(2);
+			} else if (absNum >= 1) {
+				return num.toFixed(2);
+			} else if (absNum >= 0.001) {
+				return num.toFixed(4);
+			} else {
+				return num.toFixed(6);
+			}
+		}
+
+		// 重置表單數值
+		function resetFlyForm() {
+			document.getElementById('fly-resolution').value = '';
+			document.getElementById('fly-fov').value = '';
+			document.getElementById('fly-shutter').value = '';
+			document.getElementById('fly-shutter-unit').value = 'ms';
+			document.getElementById('fly-allowed-blur').value = '';
+			document.getElementById('fly-speed-unit').value = 'mm_s';
+			calculateMaxSpeed();
+		}
+		// 修正問號 Tooltiptext 顯示位置，避免超出畫面
+		const tooltipIcons = document.querySelectorAll('.tooltip');
+		tooltipIcons.forEach(tooltip => {
+			tooltip.addEventListener('mouseenter', () => {
+				const tooltiptext = tooltip.querySelector('.tooltiptext');
+				if (!tooltiptext) return;
+
+				// 重置為預設樣式以便重新計算基準位置
+				tooltiptext.style.left = '50%';
+				tooltiptext.style.marginLeft = '-110px';
+				tooltiptext.style.bottom = '150%';
+				tooltiptext.style.top = 'auto';
+				tooltiptext.style.setProperty('--arrow-left', '50%');
+				tooltiptext.classList.remove('tooltip-bottom');
+
+				const rect = tooltiptext.getBoundingClientRect();
+				const viewportWidth = window.innerWidth;
+
+				// 1. 檢查左右是否超出畫面
+				let offset = 0;
+				if (rect.left < 10) {
+					offset = 10 - rect.left;
+				} else if (rect.right > viewportWidth - 10) {
+					offset = (viewportWidth - 10) - rect.right;
+				}
+
+				if (offset !== 0) {
+					tooltiptext.style.left = `calc(50% + ${offset}px)`;
+					tooltiptext.style.setProperty('--arrow-left', `calc(50% - ${offset}px)`);
+				}
+
+				// 2. 檢查上下是否超出畫面
+				const updatedRect = tooltiptext.getBoundingClientRect();
+				if (updatedRect.top < 10) {
+					// 向上超出畫面，改為在下方顯示
+					tooltiptext.style.bottom = 'auto';
+					tooltiptext.style.top = '150%';
+					tooltiptext.classList.add('tooltip-bottom');
+				}
+			});
+		});
+
+
+
+	</script>
+
+</body>
+
+</html>
